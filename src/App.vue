@@ -1,10 +1,11 @@
 <template>
   <div id="app" @dragover.prevent="dragoverFile">
-    <header >
+    <header>
       <p>Markdown to</p>
       <ul class="types" @click="handleConvert($event)" v-if="html">
         <!-- <li>PDF</li> -->
         <li>PNG</li>
+        <li>HTML</li>
       </ul>
     </header>
     <div class="upload" v-if="!html">
@@ -14,7 +15,9 @@
       </label>
       <input type="file" id="file" @change="fileChange($event)">
     </div>
-    <div class="content" ref="html" v-html="html"></div>
+    <main>
+      <div class="content" ref="html" v-html="html" style="margin:30px;"></div>
+    </main>
   </div>
 </template>
 
@@ -22,6 +25,7 @@
 import marked from "marked";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
+import download from "downloadjs";
 export default {
   name: "app",
   data() {
@@ -35,14 +39,11 @@ export default {
       const _this = this;
       const file = e.target.files[0];
       const reader = new FileReader();
-      this.name = file.name;
+      this.name = file.name.split(".")[0];
       reader.readAsText(file, "UTF-8");
       reader.onload = function() {
         _this.html = marked(this.result);
       };
-    },
-    dragoverFile() {
-      console.log(1);
     },
     handleConvert(e) {
       const type = e.target.textContent;
@@ -52,65 +53,64 @@ export default {
           const image = canvas.toDataURL("image/" + type, 1.0);
           switch (type) {
             case "PNG":
-              this.download(image);
+              this.toPNG(image);
               break;
             case "PDF":
               this.toPdf(image, canvas);
+              break;
+            case "HTML":
+              const html = document.querySelector("main").innerHTML;
+              this.toHTML(html);
           }
         });
       }
     },
-    toPdf(image, canvas) {
-     
-      var contentWidth = canvas.width;
-      var contentHeight = canvas.height;
-
-      //一页pdf显示html页面生成的canvas高度;
-      var pageHeight = (contentWidth / 592.28) * 841.89;
-      //未生成pdf的html页面高度
-      var leftHeight = contentHeight;
-      //页面偏移
-      var position = 0;
-      //a4纸的尺寸[595.28,841.89]，html页面生成的canvas在pdf中图片的宽高
-      var imgWidth = 595.28;
-      var imgHeight = (592.28 / contentWidth) * contentHeight;
-
-      var pageData = canvas.toDataURL("image/jpeg", 1.0);
-
-      var pdf = new jsPDF("", "pt", "a4");
-
-      //有两个高度需要区分，一个是html页面的实际高度，和生成pdf的页面高度(841.89)
-      //当内容未超过pdf一页显示的范围，无需分页
-      if (leftHeight < pageHeight) {
-        pdf.addImage(pageData, "JPEG", 0, 0, imgWidth, imgHeight);
-      } else {
-        while (leftHeight > 0) {
-          pdf.addImage(pageData, "JPEG", 20, position, imgWidth, imgHeight);
-          leftHeight -= pageHeight;
-          position -= 841.89;
-          //避免添加空白页
-          if (leftHeight > 0) {
-            pdf.addPage();
-          }
-        }
-      }
-
-      pdf.save("content.pdf");
+    toPNG(data) {
+      download(data, this.name, "images/png");
     },
-    download(dataUrl) {
-      const tag = document.createElement("a");
-      tag.download = "test";
-      tag.style.display = "none";
-      tag.href = dataUrl;
-      document.body.appendChild(tag);
-      tag.click();
-      document.body.removeChild(tag);
+    toHTML(data) {
+      var blob = new Blob([data]);
+      download(blob, this.name + ".html", "text/html");
     }
+    // toPdf(image, canvas) {
+    //   var contentWidth = canvas.width;
+    //   var contentHeight = canvas.height;
+
+    //   //一页pdf显示html页面生成的canvas高度;
+    //   var pageHeight = (contentWidth / 592.28) * 841.89;
+    //   //未生成pdf的html页面高度
+    //   var leftHeight = contentHeight;
+    //   //页面偏移
+    //   var position = 0;
+    //   //a4纸的尺寸[595.28,841.89]，html页面生成的canvas在pdf中图片的宽高
+    //   var imgWidth = 595.28;
+    //   var imgHeight = (592.28 / contentWidth) * contentHeight;
+
+    //   var pageData = canvas.toDataURL("image/jpeg", 1.0);
+
+    //   var pdf = new jsPDF("", "pt", "a4");
+
+    //   //有两个高度需要区分，一个是html页面的实际高度，和生成pdf的页面高度(841.89)
+    //   //当内容未超过pdf一页显示的范围，无需分页
+    //   if (leftHeight < pageHeight) {
+    //     pdf.addImage(pageData, "JPEG", 0, 0, imgWidth, imgHeight);
+    //   } else {
+    //     while (leftHeight > 0) {
+    //       pdf.addImage(pageData, "JPEG", 20, position, imgWidth, imgHeight);
+    //       leftHeight -= pageHeight;
+    //       position -= 841.89;
+    //       //避免添加空白页
+    //       if (leftHeight > 0) {
+    //         pdf.addPage();
+    //       }
+    //     }
+    //   }
+
+    //   pdf.save("content.pdf");
+    // },
   }
 };
 </script>
-
-
 
 <style>
 html,
@@ -148,7 +148,6 @@ header p {
   cursor: pointer;
 }
 .upload {
-  /* display: inline-block; */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -163,10 +162,9 @@ header p {
   padding: 30px;
   text-align: center;
   font-size: 30px;
-  /* border: 1px dotted #ccc; */
+
   border-radius: 10px;
   color: #ccc;
-  /* background-color: #fff; */
 }
 
 .upload input {
@@ -175,21 +173,16 @@ header p {
   top: -100%;
 }
 .upload .iconfont {
-  /* padding-top: 50px; */
   font-size: 50px;
 }
 .upload span {
   display: block;
-  /* color: #232323; */
 }
 
 canvas {
   display: none;
 }
 
-.content {
-  padding: 30px;
-}
 .content li {
   line-height: 30px;
 }
