@@ -1,4 +1,4 @@
-# mt
+# markdown
 
 ## Project setup
 ```

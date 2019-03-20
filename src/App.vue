@@ -1,7 +1,10 @@
 <template>
   <div id="app" @dragover.prevent="dragoverFile">
     <header>
-      <p>Markdown to</p>
+      <p>
+        Markdown
+        <span v-if="html">to</span>
+      </p>
       <ul class="types" @click="handleConvert($event)" v-if="html">
         <!-- <li>PDF</li> -->
         <li>PNG</li>
@@ -16,8 +19,17 @@
       <input type="file" id="file" @change="fileChange($event)">
     </div>
     <main>
-      <div class="content" ref="html" v-html="html" style="margin:30px;"></div>
+      <div
+        class="content"
+        ref="html"
+        v-html="html"
+        style="margin:30px;"
+        :contenteditable="contenteditable"
+      ></div>
     </main>
+    <footer>
+      <GitHubBadge slug="allenou/markdown" class="badge"></GitHubBadge>
+    </footer>
   </div>
 </template>
 
@@ -26,12 +38,17 @@ import marked from "marked";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 import download from "downloadjs";
+import GitHubBadge from "vue-github-badge";
 export default {
   name: "app",
+  components: {
+    GitHubBadge
+  },
   data() {
     return {
       html: "",
-      name: ""
+      name: "",
+      contenteditable: true
     };
   },
   methods: {
@@ -46,23 +63,21 @@ export default {
       };
     },
     handleConvert(e) {
-      const type = e.target.textContent;
       if (e.target.tagName === "LI") {
-        html2canvas(this.$refs.html).then(canvas => {
-          document.body.appendChild(canvas);
-          const image = canvas.toDataURL("image/" + type, 1.0);
-          switch (type) {
-            case "PNG":
-              this.toPNG(image);
-              break;
-            case "PDF":
-              this.toPdf(image, canvas);
-              break;
-            case "HTML":
-              const html = document.querySelector("main").innerHTML;
-              this.toHTML(html);
-          }
-        });
+        const type = e.target.textContent;
+        if (type === "HTML") {
+          this.contenteditable = false;
+          setTimeout(() => {
+            const html = document.querySelector("main").innerHTML;
+            this.toHTML(html);
+          }, 0);
+        }
+        if (type === "PNG") {
+          html2canvas(this.$refs.html).then(canvas => {
+            const image = canvas.toDataURL("image/" + type, 1.0);
+            this.toPNG(image);
+          });
+        }
       }
     },
     toPNG(data) {
@@ -71,6 +86,7 @@ export default {
     toHTML(data) {
       var blob = new Blob([data]);
       download(blob, this.name + ".html", "text/html");
+      this.contenteditable = true;
     }
     // toPdf(image, canvas) {
     //   var contentWidth = canvas.width;
@@ -113,11 +129,6 @@ export default {
 </script>
 
 <style>
-html,
-body {
-  height: 100%;
-  margin: 0;
-}
 #app {
   height: 100%;
   font-family: "Avenir", Helvetica, Arial, sans-serif;
@@ -125,6 +136,10 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
   display: flex;
   justify-content: space-between;
   padding: 14px 0;
@@ -182,8 +197,18 @@ header p {
 canvas {
   display: none;
 }
-
+main {
+  padding-top: 50px;
+}
+.content {
+  outline: none;
+}
 .content li {
   line-height: 30px;
+}
+
+footer /deep/ .badge {
+  top: inherit!important;
+  bottom: 1rem!important;
 }
 </style>
