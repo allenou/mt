@@ -1,31 +1,30 @@
 <template>
-  <div id="app" @dragover.prevent="dragoverFile">
+  <div id="app">
     <header>
       <p>
         Markdown
         <span v-if="html">to</span>
       </p>
-      <ul class="types" @click="handleConvert($event)" v-if="html">
-        <!-- <li>PDF</li> -->
-        <li>PNG</li>
-        <li>HTML</li>
+      <ul class="types" v-if="html">
+        <li @click="toPDF">PDF</li>
+        <li @click="toPNG">PNG</li>
+        <li @click="toHTML">HTML</li>
       </ul>
     </header>
     <div class="upload" v-if="!html">
-      <label for="file">
+      <label
+        for="file"
+        @dragenter.prevent
+        @dragover.prevent
+        @drop.stop.prevent="fileChange($event)"
+      >
         <i class="iconfont">&#xe656;</i>
-        <span>Select file</span>
+        <span>Drag or select a file</span>
       </label>
-      <input type="file" id="file" @change="fileChange($event)">
+      <input type="file" id="file" accept=".md"  @change="fileChange($event)">
     </div>
     <main>
-      <div
-        class="content"
-        ref="html"
-        v-html="html"
-        style="margin:30px;"
-        :contenteditable="contenteditable"
-      ></div>
+      <div class="content" ref="html" v-html="html" style="padding:30px;"></div>
     </main>
     <footer>
       <GitHubBadge slug="allenou/markdown" class="badge"></GitHubBadge>
@@ -35,10 +34,10 @@
 
 <script>
 import marked from "marked";
-import jsPDF from "jspdf";
-import html2canvas from "html2canvas";
 import download from "downloadjs";
 import GitHubBadge from "vue-github-badge";
+import html2pdf from "html2pdf.js";
+import html2canvas from "html2canvas";
 export default {
   name: "app",
   components: {
@@ -47,88 +46,71 @@ export default {
   data() {
     return {
       html: "",
-      name: "",
-      contenteditable: true
+      name: "file",
+      file: null
     };
   },
   methods: {
     fileChange(e) {
-      const _this = this;
-      const file = e.target.files[0];
-      const reader = new FileReader();
-      this.name = file.name.split(".")[0];
-      reader.readAsText(file, "UTF-8");
-      reader.onload = function() {
-        _this.html = marked(this.result);
-      };
-    },
-    handleConvert(e) {
-      if (e.target.tagName === "LI") {
-        const type = e.target.textContent;
-        if (type === "HTML") {
-          this.contenteditable = false;
-          setTimeout(() => {
-            const html = document.querySelector("main").innerHTML;
-            this.toHTML(html);
-          }, 0);
-        }
-        if (type === "PNG") {
-          html2canvas(this.$refs.html).then(canvas => {
-            const image = canvas.toDataURL("image/" + type, 1.0);
-            this.toPNG(image);
-          });
-        }
+      if (e.type === "change") {
+        this.previewMarkdown(e.target.files[0]);
+      }
+      if (e.type === "drop") {
+        this.previewMarkdown(e.dataTransfer.files[0]);
       }
     },
-    toPNG(data) {
-      download(data, this.name, "images/png");
+    readerFile(file) {
+      const reader = new FileReader();
+      return new Promise(resolve => {
+        reader.readAsText(file, "UTF-8");
+        reader.onload = function() {
+          resolve(this.result);
+        };
+      });
     },
-    toHTML(data) {
-      var blob = new Blob([data]);
+
+    previewMarkdown(file) {
+      this.readerFile(file).then(result => {
+        this.html = marked(result);
+      });
+    },
+
+    toHTML() {
+      var blob = new Blob([document.querySelector("main").innerHTML]);
       download(blob, this.name + ".html", "text/html");
-      this.contenteditable = true;
+    },
+    toPNG() {
+      html2canvas(document.querySelector(".content")).then(canvas => {
+        const image = canvas.toDataURL("image/png", 1.0);
+        download(image, this.name, "images/png");
+      });
+    },
+    toPDF() {
+      var opt = {
+        margin: [0.2, 0, 0.2, 0],
+        filename: this.name + ".pdf",
+        pagebreak: { mode: ["avoid-all"] },
+        image: { type: "jpeg", quality: 1 },
+        html2canvas: { scale: 2 },
+        jsPDF: { unit: "in", format: "letter", orientation: "portrait" }
+      };
+
+      html2pdf()
+        .set(opt)
+        .from(document.querySelector(".content"))
+        .save();
     }
-    // toPdf(image, canvas) {
-    //   var contentWidth = canvas.width;
-    //   var contentHeight = canvas.height;
-
-    //   //一页pdf显示html页面生成的canvas高度;
-    //   var pageHeight = (contentWidth / 592.28) * 841.89;
-    //   //未生成pdf的html页面高度
-    //   var leftHeight = contentHeight;
-    //   //页面偏移
-    //   var position = 0;
-    //   //a4纸的尺寸[595.28,841.89]，html页面生成的canvas在pdf中图片的宽高
-    //   var imgWidth = 595.28;
-    //   var imgHeight = (592.28 / contentWidth) * contentHeight;
-
-    //   var pageData = canvas.toDataURL("image/jpeg", 1.0);
-
-    //   var pdf = new jsPDF("", "pt", "a4");
-
-    //   //有两个高度需要区分，一个是html页面的实际高度，和生成pdf的页面高度(841.89)
-    //   //当内容未超过pdf一页显示的范围，无需分页
-    //   if (leftHeight < pageHeight) {
-    //     pdf.addImage(pageData, "JPEG", 0, 0, imgWidth, imgHeight);
-    //   } else {
-    //     while (leftHeight > 0) {
-    //       pdf.addImage(pageData, "JPEG", 20, position, imgWidth, imgHeight);
-    //       leftHeight -= pageHeight;
-    //       position -= 841.89;
-    //       //避免添加空白页
-    //       if (leftHeight > 0) {
-    //         pdf.addPage();
-    //       }
-    //     }
-    //   }
-
-    //   pdf.save("content.pdf");
-    // },
   }
 };
 </script>
 
 <style>
+html,
+body,
+#app {
+  margin: 0;
+  height: 100%;
+}
 #app {
   height: 100%;
   font-family: "Avenir", Helvetica, Arial, sans-serif;
@@ -141,8 +123,9 @@ header {
   left: 0;
   right: 0;
   display: flex;
+  align-items: center;
   justify-content: space-between;
-  padding: 14px 0;
+  height: 50px;
   color: #fff;
   background-color: #232323;
 }
@@ -158,10 +141,17 @@ header p {
 }
 .types li {
   float: right;
+  height: 50px;
+  line-height: 50px;
   padding: 0 30px;
   list-style: none;
   cursor: pointer;
 }
+.types li:hover {
+  color: #000;
+  background-color: #ccc;
+}
+
 .upload {
   display: flex;
   align-items: center;
@@ -172,8 +162,8 @@ header p {
   left: 0;
   right: 0;
   margin: auto;
-  height: 300px;
-  width: 300px;
+  /* height: 300px;
+  width: 300px; */
   padding: 30px;
   text-align: center;
   font-size: 30px;
@@ -187,8 +177,12 @@ header p {
   z-index: -11;
   top: -100%;
 }
+.upload label {
+  padding: 120px;
+  background-color: #ecf0f15e;
+}
 .upload .iconfont {
-  font-size: 50px;
+  font-size: 70px;
 }
 .upload span {
   display: block;
@@ -208,7 +202,7 @@ main {
 }
 
 footer /deep/ .badge {
-  top: inherit!important;
-  bottom: 1rem!important;
+  top: inherit !important;
+  bottom: 1rem !important;
 }
 </style>
