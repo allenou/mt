@@ -2,7 +2,7 @@
   <div id="app">
     <header>
       <p>
-        Markdown
+        <a href="/markdown">Markdown &nbsp;</a>
         <span v-if="html">to</span>
       </p>
       <ul class="types" v-if="html">
@@ -11,19 +11,20 @@
         <li @click="toHTML">HTML</li>
       </ul>
     </header>
-    <div class="upload" v-if="!html">
-      <label
-        for="file"
-        @dragenter.prevent
-        @dragover.prevent
-        @drop.stop.prevent="fileChange($event)"
-      >
+    <label
+      for="file"
+      @dragenter.prevent
+      @dragover.prevent
+      @drop.stop.prevent="fileChange($event)"
+      v-if="!html"
+    >
+      <p>
         <i class="iconfont">&#xe656;</i>
-        <span>Drag or select a file</span>
-      </label>
-      <input type="file" id="file" accept=".md"  @change="fileChange($event)">
-    </div>
-    <main>
+        Drag or select a file
+      </p>
+      <input type="file" id="file" accept=".md" @change="fileChange($event)" />
+    </label>
+    <main v-else>
       <div class="content" ref="html" v-html="html" style="padding:30px;"></div>
     </main>
     <footer>
@@ -107,12 +108,16 @@ export default {
 <style>
 html,
 body,
-#app {
+p {
   margin: 0;
+}
+html,
+body,
+#app,
+label {
   height: 100%;
 }
 #app {
-  height: 100%;
   font-family: "Avenir", Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -133,7 +138,11 @@ header p {
   margin: 0;
   padding-left: 30px;
 }
-
+header a {
+  color: #fff;
+  font-family: initial;
+  text-decoration: none;
+}
 .types {
   overflow: hidden;
   margin: 0;
@@ -152,40 +161,24 @@ header p {
   background-color: #ccc;
 }
 
-.upload {
+label {
   display: flex;
   align-items: center;
   justify-content: center;
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  margin: auto;
-  /* height: 300px;
-  width: 300px; */
-  padding: 30px;
   text-align: center;
   font-size: 30px;
-
   border-radius: 10px;
   color: #ccc;
 }
 
-.upload input {
+label input {
   position: absolute;
   z-index: -11;
   top: -100%;
 }
-.upload label {
-  padding: 120px;
-  background-color: #ecf0f15e;
-}
-.upload .iconfont {
-  font-size: 70px;
-}
-.upload span {
+label .iconfont {
   display: block;
+  font-size: 70px;
 }
 
 canvas {

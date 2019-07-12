@@ -1,3 +1,4 @@
 module.exports = {
-    publicPath: 'markdown'
+    publicPath: 'markdown',
+    outputDir:'docs'
 }
