@@ -2,7 +2,7 @@
   <div id="app">
     <header>
       <p>
-        <a href="/markdown">Markdown &nbsp;</a>
+         Markdown &nbsp;
         <span v-if="html">to</span>
       </p>
       <ul class="types" v-if="html">
