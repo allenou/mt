@@ -10,7 +10,7 @@
   "dependencies": {
     "downloadjs": "^1.4.7",
     "html2canvas": "^1.0.0-alpha.12",
-    "jspdf": "^1.5.3",
+    "jspdf": "^2.3.1",
     "marked": "^0.6.1",
     "vue": "^2.6.6",
     "vue-github-badge": "^1.0.1"
